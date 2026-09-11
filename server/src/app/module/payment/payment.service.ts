@@ -30,6 +30,19 @@ const createCheckoutSession = async (payload: ICreateCheckoutSession) => {
         },
     });
 
+    if (requestId) {
+        const request = await prisma.bloodRequest.findUnique({
+            where: { id: requestId },
+        });
+
+        console.log('Payment requestId:', requestId);
+        console.log('Found BloodRequest:', request);
+
+        if (!request) {
+            throw new Error('Blood request not found');
+        }
+    }
+
     await prisma.payment.create({
         data: {
             stripePaymentIntentId: session.id,
