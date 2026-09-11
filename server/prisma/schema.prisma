@@ -1,0 +1,92 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum BloodGroup {
+  A_POSITIVE  @map("A+")
+  A_NEGATIVE  @map("A-")
+  B_POSITIVE  @map("B+")
+  B_NEGATIVE  @map("B-")
+  AB_POSITIVE @map("AB+")
+  AB_NEGATIVE @map("AB-")
+  O_POSITIVE  @map("O+")
+  O_NEGATIVE  @map("O-")
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  phone        String         @unique
+  password     String
+  bloodGroup   BloodGroup
+  location     String
+  isAvailable  Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  requests     BloodRequest[] @relation("UserRequests")
+  donations    Donation[]     @relation("DonorDonations")
+  payments     Payment[]
+}
+
+model BloodRequest {
+  id           String        @id @default(uuid())
+  patientName  String
+  bloodGroup   BloodGroup
+  unitsNeeded  Int           @default(1)
+  hospitalName String
+  location     String
+  contactPhone String
+  urgency      String
+  status       RequestStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  requesterId  String
+  requester    User          @relation("UserRequests", fields: [requesterId], references: [id])
+  donations    Donation[]
+  payments     Payment[]
+}
+
+model Donation {
+  id        String       @id @default(uuid())
+  requestId String
+  request   BloodRequest @relation(fields: [requestId], references: [id])
+  donorId   String
+  donor     User         @relation("DonorDonations", fields: [donorId], references: [id])
+  donatedAt DateTime     @default(now())
+}
+
+model Payment {
+  id                    String        @id @default(uuid())
+  stripePaymentIntentId String        @unique
+  amount                Int
+  currency              String        @default("usd")
+  status                PaymentStatus @default(PENDING)
+  createdAt             DateTime      @default(now())
+
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id])
+  requestId             String?
+  request               BloodRequest? @relation(fields: [requestId], references: [id])
+}
